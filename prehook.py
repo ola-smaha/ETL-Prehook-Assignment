@@ -29,6 +29,10 @@ def execute_folder(directory_path, input_file_type, db_session, input_schema=Non
             if not return_val == ErrorHandling.NO_ERROR:
                 raise Exception(f"{PreHookSteps.EXECUTE_CSV_QUERY.value} = CSV File Error on CSV FILE = {str(csv_file)}" )
 
+# added new schema and tables in lookups, (schema was created manually in pgadmin)
+# return_tables_by_schema unchanged.
+# handled error in create_sql_staging_tables
+
 def return_tables_by_schema(schema_name):
     schema_tables = list()
     tables = [table.value for table in SQLTablesToReplicate]
@@ -50,21 +54,20 @@ def create_sql_staging_tables(db_session, source_name):
         if not return_val == ErrorHandling.NO_ERROR:
             raise Exception(f"{PreHookSteps.CREATE_STG_TABLE.value} = Error creating stg table of : {str(table)}" )
 
+# altered execute_prehook to include both cases, added new enum class in lookups (DirectoyPaths)
 def execute_prehook(directory_path,schema):
     try:
         db_session = create_connection()
         if directory_path == DirectoryPaths.SQL_FOLDER.value:
             # Step 1:
-            execute_folder(directory_path, InputTypes.SQL , db_session, input_schema=None) 
+            execute_folder(directory_path, InputTypes.SQL , db_session) 
             # Step 2 getting dvd rental staging:
             create_sql_staging_tables(db_session,SourceName.DVD_RENTAL.value)
         elif directory_path == DirectoryPaths.CSV_FOLDER.value:
             # Step 1:
             execute_folder(directory_path, InputTypes.CSV , db_session, input_schema=schema) 
-            # Step 2 getting dvd rental staging:
+            # Step 2 getting powerbi staging tables:
             create_sql_staging_tables(db_session,SourceName.POWERBI.value)
-        # Step 3 getting college staging:
-        # create_sql_staging_tables(db_session,SourceName.COLLEGE)
         close_connection(db_session)
     except Exception as error:
         suffix = str(error)
